@@ -56,6 +56,12 @@ app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
 
 })
 
+
+// TO-DO
+// generate random passwod for user
+// return the password of the user
+// get the driving licence file
+// put it in storage like firebase
 app.post('/register',async (req,res)=>{
     let reqPhoneNumber= req.body.phoneNumber
     let reqFullName= req.body.fullName
@@ -108,6 +114,8 @@ app.post('/register',async (req,res)=>{
 
 
 //routes
+
+// TO-REMOVE
 app.get("/users",authMiddelware.verifyToken,(req,res)=>{
     console.log(req.user)
     userDb.find({})
@@ -120,6 +128,9 @@ app.get("/users",authMiddelware.verifyToken,(req,res)=>{
     })
 })
 
+
+// cars : to get all cars
+// don't know if we show all cars or only non-rented
 app.get("/cars",authMiddelware.verifyToken,(req,res)=>{
     carDb.find({})
     .then((cars)=>{
@@ -132,6 +143,7 @@ app.get("/cars",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
+// to get one car information: don't know if we need it because we have cars
 app.get("/cars/:idCar",authMiddelware.verifyToken,(req,res)=>{ 
     carDb.findById(req.params.idCar)
     .then((car)=>{
@@ -148,6 +160,7 @@ app.get("/cars/:idCar",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
+// get list of cars rented
 app.get("/user/carsRented",authMiddelware.verifyToken,(req,res)=>{
     userDb.findById(req.user.user_id)
     .then(async (user)=>{
@@ -165,25 +178,31 @@ app.get("/user/carsRented",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
+// reserve a car
+// TO-DO
+// we can do update to the user carrented array without getting the user
+// remove car from rented list
+// add pin when reserve
+
 app.post("/reserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
-    console.log(req.body)
-    userDb.findById(req.user.user_id)
-    .then(async (user)=>{
-        console.log(user)
-        let alreadyRented=user.carsRented.includes(req.params.idCar);
-        if(alreadyRented){
-            res.status(302).json({"status":"error","message":"Already Rented"});
-        }else{
-            let car = await carDb.findById(req.params.idCar);
-            if(car){
-                car.availability = false
-                car.save()
+    console.log(req.user)
+
+    carDb.findById(req.params.idCar)
+    .then(async (car)=>{
+        if(car){
+            if(car.availability){
+                let user = await userDb.findById(req.user.user_id);
                 user.carsRented.push(req.params.idCar)
                 user.save()
+                car.availability = false
+                car.save()
                 res.status(200).json(user.carsRented)
             }else{
-                res.status(404).json({"status":"error","message":"Not Found"})
+                res.status(302).json({"status":"error","message":"Already Rented"});
             }
+
+        }else{
+            res.status(404).json({"status":"error","message":"Not Found"})
         }
     })
     .catch((err)=>{
