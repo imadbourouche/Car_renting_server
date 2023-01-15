@@ -10,13 +10,17 @@ const authMiddelware = require("./middleware/auth")
 const app = express()
 const path=require('path')
 const mongoose = require('mongoose')
+var bodyParser = require('body-parser')
 
 //midellware
 app.use(express.json())
 app.use(morgan('dev'))
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }))
 
 //authentification
 app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
+    console.log(req.body.phoneNumber,req.body.password)
     let reqPhoneNumber= req.body.phoneNumber
     let reqPassword = req.body.password
 
@@ -58,18 +62,15 @@ app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
 
 
 // TO-DO
-// generate random passwod for user
-// return the password of the user
 // get the driving licence file
 // put it in storage like firebase
 app.post('/register',async (req,res)=>{
     let reqPhoneNumber= req.body.phoneNumber
-    let reqFullName= req.body.fullName
     let reqCreditCardNumber=req.body.creditCardNumber
     let reqCreditCardExpiration=req.body.creditCardExpiration
     let reqDrivingLicense=req.body.drivingLicense
 
-    if(!reqPhoneNumber || !reqFullName || !reqCreditCardNumber || !reqCreditCardExpiration || !reqDrivingLicense){
+    if(!reqPhoneNumber || !reqCreditCardNumber || !reqCreditCardExpiration || !reqDrivingLicense){
         res.status(400).json({"status":"error","message":"information not complete"})
     }else{
         try{
@@ -78,9 +79,9 @@ app.post('/register',async (req,res)=>{
                 res.status(400).json({"status":"error","message":"phone number existe"})
             }
             else{
-                encryptedPassword = await bcrypt.hash("123", 10);
+                let pass = Math.floor(Math.random() * (99999999 - 10000000) + 10000000);
+                let encryptedPassword = await bcrypt.hash(pass.toString(), 10);
                 const newUser = await userDb.create({
-                    fullName: reqFullName,
                     phoneNumber: reqPhoneNumber,
                     password: encryptedPassword,
                     creditCardNumber: reqCreditCardNumber,
@@ -97,12 +98,15 @@ app.post('/register',async (req,res)=>{
                 )
                 newUser.token=jwtToken
 
-                res.status(201).json(newUser)
+                res.status(201).json({"user":newUser,"password":pass.toString()})
             }
         }catch(err){
             if(err.code=11000){
+                //console.log(err);
                 console.log(`Duplication Error ${Object.keys(err.keyValue)[0]} already exists.`)
                 res.status(500).json({"status":"error","message":Object.keys(err.keyValue)[0] + " already exists."})
+                //res.status(500).json({"status":"error","message":"information already exists."})
+                
             }else{
                 console.log(err)
                 res.status(500).json({"status":"error","message":"server error"})
