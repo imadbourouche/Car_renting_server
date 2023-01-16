@@ -136,7 +136,7 @@ app.get("/users",authMiddelware.verifyToken,(req,res)=>{
 // cars : to get all cars
 // don't know if we show all cars or only non-rented
 app.get("/cars",authMiddelware.verifyToken,(req,res)=>{
-    carDb.find({})
+    carDb.aggregate([{ $project: { PIN:0 } }])
     .then((cars)=>{
         res.status(200).json(cars)
     })
@@ -199,6 +199,7 @@ app.post("/reserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
                 user.carsRented.push(req.params.idCar)
                 user.save()
                 car.availability = false
+                car.PIN = Math.floor(Math.random() * (9999 - 1111) + 1111);
                 car.save()
                 res.status(200).json(user.carsRented)
             }else{

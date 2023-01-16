@@ -40,6 +40,11 @@ const carSchema = new mongoose.Schema({
     image:{
         type: String,
         require: true
+    },
+
+    PIN:{
+        type: String,
+        default: 0
     }
 
 });
