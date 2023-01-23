@@ -15,8 +15,11 @@ var bodyParser = require('body-parser')
 //midellware
 app.use(express.json())
 app.use(morgan('dev'))
+
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }))
+// parse application/json
+app.use(bodyParser.json())
 
 //authentification
 app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
@@ -63,7 +66,6 @@ app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
 
 // TO-DO
 // get the driving licence file
-// put it in storage like firebase
 app.post('/register',async (req,res)=>{
     let reqPhoneNumber= req.body.phoneNumber
     let reqCreditCardNumber=req.body.creditCardNumber
@@ -119,7 +121,6 @@ app.post('/register',async (req,res)=>{
 
 //routes
 
-// TO-REMOVE
 app.get("/users",authMiddelware.verifyToken,(req,res)=>{
     console.log(req.user)
     userDb.find({})
@@ -133,8 +134,6 @@ app.get("/users",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
-// cars : to get all cars
-// don't know if we show all cars or only non-rented
 app.get("/cars",authMiddelware.verifyToken,(req,res)=>{
     carDb.aggregate([{ $project: { PIN:0 } }])
     .then((cars)=>{
@@ -147,7 +146,6 @@ app.get("/cars",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
-// to get one car information: don't know if we need it because we have cars
 app.get("/cars/:idCar",authMiddelware.verifyToken,(req,res)=>{ 
     carDb.findById(req.params.idCar)
     .then((car)=>{
@@ -164,8 +162,9 @@ app.get("/cars/:idCar",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
-// get list of cars rented
+
 app.get("/user/carsRented",authMiddelware.verifyToken,(req,res)=>{
+    console.log(req.user)
     userDb.findById(req.user.user_id)
     .then(async (user)=>{
         let cars = await carDb.find({
@@ -181,12 +180,6 @@ app.get("/user/carsRented",authMiddelware.verifyToken,(req,res)=>{
     })
 })
 
-
-// reserve a car
-// TO-DO
-// we can do update to the user carrented array without getting the user
-// remove car from rented list
-// add pin when reserve
 
 app.post("/reserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
     console.log(req.user)
@@ -214,6 +207,59 @@ app.post("/reserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
         console.log(err)
         res.status(500).json({"status":"error","message":"server error"})
     })
+})
+
+
+app.post("/endreserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
+    console.log(req.user)
+    userDb.findById(req.user.user_id)
+    .then(async (user)=>{
+        if(user){
+            let car = carDb.findById(req.params.idCar)
+            if(car){
+                user.carsRented.remove(req.params.idCar)
+                user.save()
+                const filter = {_id: req.params.idCar}
+                const update = {availability: true, PIN:0} 
+                let doc = await carDb.findOneAndUpdate(filter,update);
+                res.status(404).json({"status":"success","message":"End reservation successfully"})
+            }else{
+                res.status(404).json({"status":"error","message":"Car Not Found"})
+            }
+        }else{
+            res.status(404).json({"status":"error","message":"User Not Found"})
+        }
+    })
+    .catch((err)=>{
+        console.log(err)
+        res.status(500).json({"status":"error","message":"server error"})
+    })
+})
+
+
+
+app.post("/editinfo", authMiddelware.verifyToken,(req,res)=>{
+    userDb.findById(req.user.user_id)
+    .then(async (user)=>{
+        if (user){
+            const filter = {_id: req.user.user_id}
+            const update = req.body
+            let doc = await userDb.findOneAndUpdate(filter,update, {new: true});
+            res.status(200).json({"status":"success","message":doc})
+        }else{
+            res.status(404).json({"status":"error","message":"Not Found"})
+        }
+    })
+    .catch((err)=>{
+        if(err.code=11000){
+            console.log(`Duplication Error when update ${Object.keys(err.keyValue)[0]} already exists.`)
+            res.status(500).json({"status":"error","message":Object.keys(err.keyValue)[0] + " already exists."})
+        }else{
+            console.log(err)
+            res.status(500).json({"status":"error","message":"server error"})
+        }
+    })
+
 })
 
 module.exports = app;
