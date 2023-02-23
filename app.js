@@ -12,9 +12,17 @@ const path=require('path')
 const mongoose = require('mongoose')
 var bodyParser = require('body-parser')
 
+
+// swagger for api documentation
+const swaggerUi = require('swagger-ui-express')
+const swaggerFile = require('./swagger_output.json')
+app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile))
+
+
 //midellware
 app.use(express.json())
 app.use(morgan('dev'))
+app.use(express.static('public'));
 
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -22,6 +30,7 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 //authentification
+/*
 app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
     console.log(req.body.phoneNumber,req.body.password)
     let reqPhoneNumber= req.body.phoneNumber
@@ -62,10 +71,11 @@ app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
     }
 
 })
-
+*/
 
 // TO-DO
 // get the driving licence file
+/*
 app.post('/register',async (req,res)=>{
     let reqPhoneNumber= req.body.phoneNumber
     let reqCreditCardNumber=req.body.creditCardNumber
@@ -116,12 +126,12 @@ app.post('/register',async (req,res)=>{
         }
     }
 })
-
+*/
 
 
 //routes
 
-app.get("/users",authMiddelware.verifyToken,(req,res)=>{
+app.get("/users",(req,res)=>{
     console.log(req.user)
     userDb.find({})
     .then((users)=>{
@@ -134,7 +144,7 @@ app.get("/users",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
-app.get("/cars",authMiddelware.verifyToken,(req,res)=>{
+app.get("/cars",(req,res)=>{
     carDb.aggregate([{ $project: { PIN:0 } }])
     .then((cars)=>{
         res.status(200).json(cars)
@@ -146,8 +156,8 @@ app.get("/cars",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
-app.get("/cars/:idCar",authMiddelware.verifyToken,(req,res)=>{ 
-    carDb.findById(req.params.idCar)
+app.get("/cars/:idCar",(req,res)=>{ 
+    carDb.aggregate([ { $match: { $expr : { $eq: [ '$_id' , { $toObjectId: req.params.idCar } ] } } } , { $project: { PIN:0 } }])
     .then((car)=>{
         if(car){
             res.status(200).json(car)
@@ -163,12 +173,13 @@ app.get("/cars/:idCar",authMiddelware.verifyToken,(req,res)=>{
 
 
 
-app.get("/user/carsRented",authMiddelware.verifyToken,(req,res)=>{
-    console.log(req.user)
-    userDb.findById(req.user.user_id)
+app.get("/user/carsRented/:phone",(req,res)=>{
+    console.log(req.params.phone)
+    userDb.findOne({ phoneNumber: req.params.phone})
     .then(async (user)=>{
+        console.log(user)
         let cars = await carDb.find({
-            '_id': { $in: 
+            _id: { $in: 
                 user.carsRented
             }
         });
@@ -181,14 +192,14 @@ app.get("/user/carsRented",authMiddelware.verifyToken,(req,res)=>{
 })
 
 
-app.post("/reserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
-    console.log(req.user)
+app.post("/reserve/:phone/:idCar",async (req,res)=>{
+    console.log(req.params.phone)
 
     carDb.findById(req.params.idCar)
     .then(async (car)=>{
         if(car){
             if(car.availability){
-                let user = await userDb.findById(req.user.user_id);
+                let user = await userDb.findOne({ phoneNumber: req.params.phone});
                 user.carsRented.push(req.params.idCar)
                 user.save()
                 car.availability = false
@@ -210,9 +221,10 @@ app.post("/reserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
 })
 
 
-app.post("/endreserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
-    console.log(req.user)
-    userDb.findById(req.user.user_id)
+app.post("/endreserve/:phone/:idCar",async (req,res)=>{
+    //userDb.findById(req.user.user_id)
+    console.log(req.params.phone)
+    userDb.findOne({ phoneNumber: req.params.phone})
     .then(async (user)=>{
         if(user){
             let car = carDb.findById(req.params.idCar)
@@ -238,11 +250,13 @@ app.post("/endreserve/:idCar", authMiddelware.verifyToken ,async (req,res)=>{
 
 
 
-app.post("/editinfo", authMiddelware.verifyToken,(req,res)=>{
-    userDb.findById(req.user.user_id)
+app.post("/editinfo/:phone",(req,res)=>{
+    //userDb.findById(req.user.user_id)
+    console.log(req.body.phoneNumber,req.body.password,req.body.creditCardNumber)
+    userDb.findOne({ phoneNumber: req.params.phone})
     .then(async (user)=>{
         if (user){
-            const filter = {_id: req.user.user_id}
+            const filter = {phoneNumber:req.params.phone}
             const update = req.body
             let doc = await userDb.findOneAndUpdate(filter,update, {new: true});
             res.status(200).json({"status":"success","message":doc})
