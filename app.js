@@ -131,7 +131,7 @@ app.post('/register',async (req,res)=>{
 
 //routes
 
-app.get("/users",(req,res)=>{
+app.get("/api/users",(req,res)=>{
     console.log(req.user)
     userDb.find({})
     .then((users)=>{
