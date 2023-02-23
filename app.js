@@ -22,7 +22,7 @@ app.use('/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile))
 //midellware
 app.use(express.json())
 app.use(morgan('dev'))
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -144,7 +144,9 @@ app.get("/users",(req,res)=>{
 })
 
 
-app.get("/cars",(req,res)=>{
+
+
+app.get("/api/cars",(req,res)=>{
     carDb.aggregate([{ $project: { PIN:0 } }])
     .then((cars)=>{
         res.status(200).json(cars)
@@ -156,11 +158,12 @@ app.get("/cars",(req,res)=>{
 })
 
 
-app.get("/cars/:idCar",(req,res)=>{ 
+app.get("/api/cars/:idCar",(req,res)=>{ 
     carDb.aggregate([ { $match: { $expr : { $eq: [ '$_id' , { $toObjectId: req.params.idCar } ] } } } , { $project: { PIN:0 } }])
     .then((car)=>{
         if(car){
-            res.status(200).json(car)
+            console.log(car[0])
+            res.status(200).json(car[0])
         }else{
             res.status(404).json({"status":"error","message":"Not Found"})
         }
@@ -173,7 +176,7 @@ app.get("/cars/:idCar",(req,res)=>{
 
 
 
-app.get("/user/carsRented/:phone",(req,res)=>{
+app.get("/api/user/carsRented/:phone",(req,res)=>{
     console.log(req.params.phone)
     userDb.findOne({ phoneNumber: req.params.phone})
     .then(async (user)=>{
@@ -192,7 +195,7 @@ app.get("/user/carsRented/:phone",(req,res)=>{
 })
 
 
-app.post("/reserve/:phone/:idCar",async (req,res)=>{
+app.post("/api/reserve/:phone/:idCar",async (req,res)=>{
     console.log(req.params.phone)
 
     carDb.findById(req.params.idCar)
@@ -221,7 +224,7 @@ app.post("/reserve/:phone/:idCar",async (req,res)=>{
 })
 
 
-app.post("/endreserve/:phone/:idCar",async (req,res)=>{
+app.post("/api/endreserve/:phone/:idCar",async (req,res)=>{
     //userDb.findById(req.user.user_id)
     console.log(req.params.phone)
     userDb.findOne({ phoneNumber: req.params.phone})
@@ -250,7 +253,7 @@ app.post("/endreserve/:phone/:idCar",async (req,res)=>{
 
 
 
-app.post("/editinfo/:phone",(req,res)=>{
+app.post("/api/editinfo/:phone",(req,res)=>{
     //userDb.findById(req.user.user_id)
     console.log(req.body.phoneNumber,req.body.password,req.body.creditCardNumber)
     userDb.findOne({ phoneNumber: req.params.phone})
