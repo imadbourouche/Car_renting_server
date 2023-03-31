@@ -30,7 +30,7 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 //authentification
-/*
+
 app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
     console.log(req.body.phoneNumber,req.body.password)
     let reqPhoneNumber= req.body.phoneNumber
@@ -71,11 +71,7 @@ app.post('/login',authMiddelware.loggedIn,async (req,res)=>{
     }
 
 })
-*/
 
-// TO-DO
-// get the driving licence file
-/*
 app.post('/register',async (req,res)=>{
     let reqPhoneNumber= req.body.phoneNumber
     let reqCreditCardNumber=req.body.creditCardNumber
@@ -126,7 +122,7 @@ app.post('/register',async (req,res)=>{
         }
     }
 })
-*/
+
 
 
 //routes
